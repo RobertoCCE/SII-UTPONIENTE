@@ -14,6 +14,7 @@ ProfeCtr.showById = async (req, res) => {
   res.render("admin/profes/profesores-id", profe);
 };
 
+
 ProfeCtr.update_ficha = async (req, res) => {
   const { id } = req.params;
   const data = {
@@ -101,6 +102,8 @@ ProfeCtr.showAsig = async (req, res) => {
 ProfeCtr.showPerfil = (req, res) => {
   res.render("admin/profes/asig/profes-perfil");
 };
+
+
 
 ProfeCtr.showSubirCalf = async (req, res) => {
   const idProfesor = req.params.id;

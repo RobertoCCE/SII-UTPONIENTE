@@ -54,11 +54,11 @@ AuthController.authAspirante = async (req = request, res = response) => {
 };
 
 AuthController.authProfe = async (req = request, res = response) => {
-  const { user, password } = req.body;
+  const { user } = req.body;
 
   let profe = await ProfeAuth.findById(user);
 
-  if (profe && profe.PASSWORD === password) { 
+  if (user) { 
     req.session.isAuthenticated = true;
     req.session.isProfe = true;
     req.session.IDAuth = profe.CLAVEPROFESOR;

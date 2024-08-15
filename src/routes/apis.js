@@ -44,7 +44,7 @@ router.get("/grupos", async (req, res) => {
   // Consulta SQL paar mostrar los grupos
   let query = `SELECT FIRST(${limit}) SKIP(${skip}) `;
   query +=
-  "grupos.codigo_grupo as codigo_grupo,grupos.grado, grupos.inicial as inicial,grupos.final as final,grupos.periodo as periodo,grupos.id_escuela as id_escuela, grupos.grupo as grupo, grupos.cupo_maximo, grupos.inscritos, profesores.nombreprofesor as claveprofesor_titular, cfgniveles.nivel as codigo_carrera ";
+    "grupos.codigo_grupo as codigo_grupo,grupos.grado, grupos.inicial,grupos.final,grupos.periodo as periodo,grupos.id_escuela as id_escuela, grupos.grupo as grupo, grupos.cupo_maximo, grupos.inscritos, profesores.nombreprofesor as claveprofesor_titular, cfgniveles.nivel as codigo_carrera ";
   query += "FROM grupos ";
   query +=
     "LEFT JOIN profesores ON grupos.claveprofesor_titular = profesores.claveprofesor ";
@@ -94,12 +94,154 @@ router.get("/grupos_alumnos/:idGrupo", async (req, res) => {
   const { limit = 10, skip = 0 } = req.query;
   const idGrupo = req.params.idGrupo;
 
-  let sql = `SELECT FIRST(${limit}) SKIP(${skip}) `;
-  sql += `alumnos.matricula, alumnos.paterno, alumnos.materno, alumnos.nombre, alumnos.nivel, alumnos.genero, alumnos.status `;
-  sql += "FROM alumnos_grupos ";
-  //sql +={}
-    "left join alumnos on alumnos_grupos.numeroalumno = alumnos.numeroalumno ";
-  sql += `where codigo_grupo = '${idGrupo}' `;
+  let sql = `SELECT FIRST ${limit} SKIP ${skip} `;
+  sql += `ALUMNOS.MATRICULA, ALUMNOS.PATERNO, ALUMNOS.MATERNO, ALUMNOS.NOMBRE, ALUMNOS.NIVEL, ALUMNOS.GENERO, ALUMNOS.STATUS `;
+  sql += `FROM ALUMNOS_GRUPOS `;
+  sql += `LEFT JOIN ALUMNOS ON ALUMNOS_GRUPOS.NUMEROALUMNO = ALUMNOS.NUMEROALUMNO `;
+  sql += `WHERE ALUMNOS_GRUPOS.CODIGO_GRUPO = '${idGrupo}' `;
+
+  // Si hay periodo seleccionado a mostrar lo agrega en la query
+  if (req.session.periodoSelected) {
+    let periodo = await Ciclos.findById(req.session.periodoSelected);
+
+    sql += `AND ALUMNOS_GRUPOS.INICIAL = ${periodo?.INICIAL} `;
+    sql += `AND ALUMNOS_GRUPOS.FINAL = ${periodo?.FINAL} `;
+    sql += `AND ALUMNOS_GRUPOS.PERIODO = ${periodo?.PERIODO} `;
+  }
+
+  // Ordena la tabla por apellidos en orden alfabético
+  sql += `ORDER BY ALUMNOS.PATERNO ASC`;
+
+  try {
+    const alumnos = await AlumnosGrupos.createQuery({ querySql: sql });
+
+    res.json({
+      querys: {
+        limit,
+        skip
+      },
+      idGrupo,
+      alumnos,
+    });
+  } catch (error) {
+    console.error('Error al ejecutar la consulta SQL:', error);
+    res.status(500).json({ error: 'Error al obtener los alumnos del grupo' });
+  }
+});
+
+
+
+//////////////////////////Filtro para calificacion por alumno/////////////////////////////////////////////////////////////////
+
+router.get("/gruposCalifi", async (req, res) => {
+  const {
+    skip = 0,
+    limit = 30,
+    search = "",
+    orderBy = "codigo_carrera",
+    sort = "asc",
+    grupo = "",
+    grado = 0,
+  } = req.query;
+  //    "grupos.codigo_grupo as codigo_grupo,grupos.grado, grupos.inicial as inicial,grupos.final as final,grupos.periodo as periodo,grupos.id_escuela as id_escuela,CASE WHEN grupos.grado + 1 >= 5 THEN grupos.grado ELSE grupos.grado + 1  END  as siguiente_grupo , grupos.grupo as grupo, grupos.cupo_maximo, grupos.inscritos, profesores.nombreprofesor as claveprofesor_titular, cfgniveles.nivel as codigo_carrera ";
+
+  // Consulta SQL paar mostrar los grupos
+  let query = `SELECT FIRST(${limit}) SKIP(${skip}) `;
+  query +=
+    "grupos.codigo_grupo as codigo_grupo,grupos.grado, grupos.inicial,grupos.final,grupos.periodo as periodo,grupos.id_escuela as id_escuela, grupos.grupo as grupo, grupos.cupo_maximo, grupos.inscritos, profesores.nombreprofesor as claveprofesor_titular, cfgniveles.nivel as codigo_carrera ";
+  query += "FROM grupos ";
+  query +=
+    "LEFT JOIN profesores ON grupos.claveprofesor_titular = profesores.claveprofesor ";
+  query += "JOIN cfgniveles ON grupos.nivel = cfgniveles.nivel ";
+
+  // Si hay palabras a bsucar, lo agrega en la consulta
+  if (search.length > 0) {
+    query += `WHERE (grupos.codigo_grupo LIKE '%${search.toLocaleUpperCase()}%') `;
+  }
+  if (grupo.length > 0) {
+    query += `AND (grupos.nivel LIKE '%${grupo.toLocaleUpperCase()}%') `;
+  }
+  if (grado > 0) {
+    let grado_alumno = parseFloat(grado) + 1;
+    query += `AND grupos.grado <= '${grado_alumno}' AND grupos.grado >= '${grado}'`;
+  }
+  // Si hay periodo seleccionado a mostrar lo agrega en la query
+  if (req.session.periodoSelected) {
+    let periodo = await Ciclos.findById(req.session.periodoSelected);
+    // Valida si ya tiene la consulta WHERE
+    query += query.includes("WHERE") ? "AND" : "WHERE";
+    // si lo tiene agrega un AND,  si no, agrega el WHERE
+    query += ` grupos.inicial = ${periodo?.INICIAL} `;
+    query += `AND grupos.final = ${periodo?.FINAL} `;
+    query += `AND grupos.periodo = ${periodo?.PERIODO} `;
+  }
+
+
+  // Codigo para ordenar si existe
+  query += `ORDER BY ${orderBy} ${sort}`;
+
+  const grupos = await Grupos.createQuery({ querySql: query });
+
+  res.json({
+    querys: {
+      limit,
+      skip,
+      search,
+      orderBy,
+      sort
+    },
+    periodoSelected: req.session.periodoSelected,
+    grupos,
+  });
+});
+
+router.get("/gruposCalifi_alumnos/:idGrupo", async (req, res) => {
+  const { limit = 10, skip = 0 } = req.query;
+  const idGrupo = req.params.idGrupo;
+
+  let sql = `SELECT FIRST ${limit} SKIP ${skip} `;
+  sql += `grupos.grado, `;
+  sql += `alumnos_grupos.codigo_grupo, `;
+  sql += `alumnos.matricula, alumnos.paterno, alumnos.materno, alumnos.nombre, `;
+  sql += `alumnos_kardex.id_plan, alumnos_kardex.claveasignatura, alumnos_kardex.id_eval, alumnos_kardex.calificacion, alumnos_kardex.inicial, alumnos_kardex.final, ALUMNOS_KARDEX.PERIODO, ALUMNOS_KARDEX.NUMEROALUMNO, alumnos_kardex.fecha, `;
+  sql += `cfgplanes_mst.nombre_plan, `;
+  sql += `cfgplanes_det.nombreasignatura, `;
+  sql += `cfgplanes_eval.descripcion AS nombre_eval, `;
+  sql += `profesores_grupos.claveprofesor, `;
+  sql += `profesores.nombreprofesor `;
+
+  sql += `FROM alumnos_grupos `;
+
+  sql += `LEFT JOIN alumnos ON alumnos_grupos.numeroalumno = alumnos.numeroalumno `;
+
+  sql += `LEFT JOIN grupos ON alumnos_grupos.codigo_grupo = grupos.codigo_grupo `;
+  sql += `AND alumnos_grupos.INICIAL = GRUPOS.INICIAL `;
+  sql += `AND alumnos_grupos.FINAL = GRUPOS.FINAL `;
+  
+  sql += `left join alumnos_kardex on alumnos_grupos.numeroalumno = alumnos_kardex.numeroalumno `;
+  sql += `AND alumnos_grupos.INICIAL = alumnos_kardex.INICIAL `;
+  sql += `AND alumnos_grupos.FINAL = alumnos_kardex.FINAL `;
+  sql += `AND alumnos_grupos.PERIODO = alumnos_kardex.PERIODO `;
+  
+  sql += `left join cfgplanes_mst on alumnos_kardex.id_plan = cfgplanes_mst.id_plan `;
+  sql += `left join cfgplanes_det on alumnos_kardex.claveasignatura = cfgplanes_det.claveasignatura `;
+  sql += `AND grupos.grado = cfgplanes_det.grado `;
+
+  sql += `left join cfgplanes_eval on alumnos_kardex.id_plan = cfgplanes_eval.id_plan `;
+  sql += `AND alumnos_kardex.id_eval = cfgplanes_eval.id_eval `;
+
+  sql += `left join profesores_grupos on ALUMNOS_KARDEX.id_plan = profesores_grupos.id_plan `;
+  sql += `AND ALUMNOS_KARDEX.CLAVEASIGNATURA = profesores_grupos.CLAVEASIGNATURA `;
+  sql += `AND ALUMNOS_KARDEX.INICIAL = profesores_grupos.INICIAL `;
+  sql += `AND ALUMNOS_KARDEX.FINAL = profesores_grupos.FINAL `;
+  sql += `AND grupos.codigo_grupo = profesores_grupos.codigo_grupo `;
+
+  sql += `left join profesores on profesores_grupos.claveprofesor = profesores.claveprofesor `;
+
+ 
+
+
+  sql += `WHERE alumnos_grupos.codigo_grupo = '${idGrupo}' `;
 
   // Si hay periodo seleccionado a mostrar lo agrega en la query
   if (req.session.periodoSelected) {
@@ -111,19 +253,59 @@ router.get("/grupos_alumnos/:idGrupo", async (req, res) => {
   }
 
   // Ordena la tabla por apellidos en orden alfabetico
-  sql += `order by alumnos.paterno asc`;
+  sql += `ORDER BY alumnos.paterno ASC`;
 
-  const alumnos = await AlumnosGrupos.createQuery({ querySql: sql });
+  try {
+    const alumnos = await AlumnosGrupos.createQuery({ querySql: sql });
 
-  res.json({
-    querys: {
-      limit,
-      skip
-    },
-    idGrupo,
-    alumnos,
-  });
+    res.json({
+      querys: {
+        limit,
+        skip
+      },
+      idGrupo,
+      alumnos,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
+
+router.put("/gruposCalifi_alumnos/:idGrupo", async (req, res) => {
+  const { numeroalumno, claveasignatura, id_eval, inicial, final, periodo, calificacion, fecha } = req.body;
+
+  // Construir la consulta SQL para actualizar los datos
+  let sql = `UPDATE alumnos_kardex SET `;
+  sql += `calificacion = '${calificacion}', `;
+  // Solo agrega la fecha si no está vacía o undefined
+  if (fecha) {
+    sql += `fecha = '${fecha}', `;
+  }
+  // Elimina la última coma y espacio adicional
+  sql = sql.slice(0, -2); 
+  sql += ` WHERE numeroalumno = '${numeroalumno}' `;
+  sql += `AND claveasignatura = '${claveasignatura}' `;
+  sql += `AND id_eval = '${id_eval}' `;
+  sql += `AND inicial = '${inicial}' `;
+  sql += `AND final = '${final}' `;
+  sql += `AND periodo = '${periodo}'`;
+
+  try {
+    await AlumnosGrupos.createQuery({ querySql: sql });
+
+    res.json({
+      message: 'Datos actualizados exitosamente',
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+
+
+
+///////////////////////////////////Fin de filtro de calificacion por alumno//////////////////////////////////////////////////////////////////////
 
 router.get("/cuatris-navbar", async (req, res) => {
   const { limit = 100 } = req.query;
@@ -186,7 +368,7 @@ router.get("/cuatrimestres", async (req, res) => {
 
 router.get('/ciclosAdmi', async (_req, res) => {
   try {
-    const ciclosAdmins = await CiclosAdmins.createQuery({querySql: "SELECT * FROM CICLOS_ADMINS"})
+    const ciclosAdmins = await CiclosAdmins.createQuery({ querySql: "SELECT * FROM CICLOS_ADMINS" })
     res.json(ciclosAdmins);
   } catch (error) {
     console.error(error);
@@ -195,7 +377,7 @@ router.get('/ciclosAdmi', async (_req, res) => {
 });
 
 router.get("/alumnos", async (req, res) => {
-  const { limit = 15, skip = 0, search, orderBy = "paterno", sort ="asc" } = req.query;
+  const { limit = 15, skip = 0, search, orderBy = "paterno", sort = "asc" } = req.query;
 
   let searchQuery = null;
 
@@ -204,9 +386,9 @@ router.get("/alumnos", async (req, res) => {
     searchQuery = `(matricula LIKE '%${search}%') `;
     searchQuery += `OR (nombre LIKE '%${search}%') `;
     searchQuery += `OR (paterno LIKE '%${search}%') `;
-    
+
     let searchLastName = search.split(" ");
-    if(searchLastName.length > 1) {
+    if (searchLastName.length > 1) {
       searchQuery += `OR (paterno LIKE '%${searchLastName[0]}%' AND materno LIKE '%${searchLastName[1]}%') `;
     }
   }
@@ -260,7 +442,7 @@ router.get("/carreras", async (req, res) => {
 router.get("/doctos/", async (req, res) => {
   const { grado, numalumno } = req.query;
 
-  if(!grado || !numalumno) {
+  if (!grado || !numalumno) {
     return res.json({
       error: 'Se necesita el grado a buscar y el numero del alumno'
     });
@@ -285,7 +467,7 @@ router.get("/doctos/", async (req, res) => {
 router.get("/calificaciones/asignaturas", async (req, res) => {
   const { idPlan = "", idAsig = "", idEval = "", idGrupo = "" } = req.query;
 
-  if(!idGrupo || !idPlan || !idAsig || !idEval) {
+  if (!idGrupo || !idPlan || !idAsig || !idEval) {
     return res.json({
       error: "El id del grupo, plan, evaluacion y asignatura son necesarios",
       querys: {
@@ -309,7 +491,7 @@ router.get("/calificaciones/asignaturas", async (req, res) => {
       final: [grupo.FINAL],
       // periodo: [grupo.PERIODO],
     }, { limit: 35 });
-    
+
     res.json({
       querys: {
         idPlan,
@@ -329,18 +511,18 @@ router.get("/calificaciones/asignaturas", async (req, res) => {
 
 // Api para consultar calificaciones por grupos
 router.get("/calificaciones", async (req, res) => {
-  const { 
+  const {
     idPlan,
     grupo,
     claveAsig,
     idEtapa,
-    idEval = "A", 
-    inicial, 
-    final, 
-    periodo,    
+    idEval = "A",
+    inicial,
+    final,
+    periodo,
   } = req.query;
 
-  if(!idPlan || !claveAsig) {
+  if (!idPlan || !claveAsig) {
     return res.json({
       error: "Hace faltan datos para la operación"
     });
@@ -350,7 +532,7 @@ router.get("/calificaciones", async (req, res) => {
 
     let plan = await Planes_Mst.findById(idPlan);
 
-    if(!plan) {
+    if (!plan) {
       return res.json({
         error: "No existe el plan"
       });
@@ -363,6 +545,7 @@ router.get("/calificaciones", async (req, res) => {
         alumnos.paterno,
         alumnos.materno,
         alumnos_kardex.calificacion,
+        alumnos_kardex.fecha,
         alumnos_kardex.id_eval,
         alumnos_kardex.id_plan
 
@@ -386,17 +569,17 @@ router.get("/calificaciones", async (req, res) => {
       order by paterno`;
 
     let data = await Grupos.createQuery({ querySql: sql });
-    
+
     res.json({
       querys: {
         idPlan,
-        grupo, 
+        grupo,
         claveAsig,
         idEtapa,
-        idEval, 
-        inicial, 
-        final, 
-        periodo, 
+        idEval,
+        inicial,
+        final,
+        periodo,
       },
       data,
     });
@@ -449,9 +632,9 @@ router.post("/calificaciones", (req, res) => {
   })
 });
 
-router.post("/grupos_add", async(req, res) => {
+router.post("/grupos_add", async (req, res) => {
 
-  const gruposAlumnos = req.body; // Obtener los datos del cuerpo de la solicitud
+  const gruposAlumnos = req.body; // Obtener los  del cuerpo de la solicitud
 
   // Extraer los campos individuales de nueva grupos alumno
   const {
@@ -526,32 +709,32 @@ router.post("/grupos_add", async(req, res) => {
 
 
 
-const data = {
-  grado: INFORMACIONALUMNO.GRADO+1,
-  matricula: INFORMACIONALUMNO.MATRICULA
-};
+  const data = {
+    grado: INFORMACIONALUMNO.GRADO + 1,
+    matricula: INFORMACIONALUMNO.MATRICULA
+  };
 
 
 
-try {
-  
-  
-  // Ejecutar la consulta en la base de datos (asegúrate de tener configurada la conexión a la base de datos correctamente)
-  const alumnos = await AlumnosGrupos.createQuery({ querySql: query });
-  const alumnos_nivel = await AlumnosNiveles.createQuery({ querySql: queryNivel });
-  const alumno = await Alumno.findByIdAndUpdate(INFORMACIONALUMNO.MATRICULA, data);
+  try {
+
+
+    // Ejecutar la consulta en la base de datos (asegúrate de tener configurada la conexión a la base de datos correctamente)
+    const alumnos = await AlumnosGrupos.createQuery({ querySql: query });
+    const alumnos_nivel = await AlumnosNiveles.createQuery({ querySql: queryNivel });
+    const alumno = await Alumno.findByIdAndUpdate(INFORMACIONALUMNO.MATRICULA, data);
 
 
     res.status(200)({ message: 'Registro realizado correctamente' });
   } catch (error) {
-    res.status(500).json({ error: 'Error al realizar el regisro'});
+    res.status(500).json({ error: 'Error al realizar el regisro' });
   }
 
 });
 
 router.get("/planes", async (req, res) => {
-  const { 
-    page = 1, 
+  const {
+    page = 1,
     search = '',
     nivel = ''
   } = req.query;
@@ -565,7 +748,7 @@ router.get("/planes", async (req, res) => {
   }
 
   if (nivel) {
-    if(search) searchQuery += ' AND '
+    if (search) searchQuery += ' AND '
     searchQuery += `nivel = '${nivel}'`
   }
 
@@ -591,8 +774,8 @@ router.get("/planes", async (req, res) => {
 router.get("/planes/:idPlan/asig", async (req, res) => {
   const { idPlan = "" } = req.params;
   const asigs = await Planes_Det.where(
-    { 
-      id_plan: [idPlan], 
+    {
+      id_plan: [idPlan],
       id_tipoeval: ["A"],
     },
     { strict: true, limit: 50 }
@@ -701,7 +884,7 @@ router.get("/profesores/:id/grupos", async (req, res) => {
   const { page = 1 } = req.query;
 
   if (page <= 0) page = 1;
-  
+
   let sql = `select first(${page * 20}) skip(${(page - 1) * 20}) *
     from profesores_grupos
     join cfgplanes_det as asig
@@ -712,7 +895,7 @@ router.get("/profesores/:id/grupos", async (req, res) => {
 
   let periodoSelected = req.session.periodoSelected;
 
-  if (periodoSelected) { 
+  if (periodoSelected) {
     let ciclos = await Ciclos.findById(periodoSelected);
     sql += `and inicial = ${ciclos.INICIAL} `;
     sql += `and final = ${ciclos.FINAL} `;
@@ -827,7 +1010,7 @@ router.post('/empresas', async (req, res) => {
 
   try {
     // Ejecutar la consulta en la base de datos
-    await new Firebird("EMPLEADOS").createQuery({querySql: query, data: values})
+    await new Firebird("EMPLEADOS").createQuery({ querySql: query, data: values })
 
     res.status(201).json({ message: 'Empresa creada exitosamente' });
   } catch (error) {
@@ -889,8 +1072,8 @@ router.get('/edoctos/', async (req, res) => {
     console.error('Error al consultar los edoctos:', error);
     res.status(500).json({
       error: 'Ocurrió un error al obtener los edoctos.',
-    });
-  }
+    });
+  }
 });
 
 router.get("/villas", async (req, res) => {
@@ -901,7 +1084,7 @@ router.get("/villas", async (req, res) => {
 });
 
 router.get("/villas/:id", async (req, res) => {
-  let villa = await VillasMst.findById(req.params. id);
+  let villa = await VillasMst.findById(req.params.id);
   res.json(villa);
 });
 
@@ -909,14 +1092,14 @@ router.get("/villas/:idVilla/cfg", async (req, res) => {
   let cfgVilla = await VillasCfg.where({
     codigo_villa: [req.params.idVilla]
   },
-  {
-    limit: 10,
-  });
+    {
+      limit: 10,
+    });
 
   res.json(cfgVilla);
 });
 
-router.get("/villas/:idVilla/cfg/:idCfg", async (req, res) => {});
+router.get("/villas/:idVilla/cfg/:idCfg", async (req, res) => { });
 
 router.post('/GrupAlumnos', async (req, res) => {
   try {
@@ -942,7 +1125,7 @@ router.post('/GrupAlumnos', async (req, res) => {
     alumnos_grupos.numeroalumno,
     alumnos_grupos.codigo_grupo
     from alumnos_grupos`;
-    
+
     query += ` WHERE alumnos_grupos.id_escuela = '${ID_ESCUELA}'`;
     query += `AND alumnos_grupos.inicial = ${INICIAL} `;
     query += `AND alumnos_grupos.final = ${FINAL} `;
@@ -988,7 +1171,7 @@ router.post('/AlumnosNivel', async (req, res) => {
     alumnos_niveles.nivel,
     alumnos_niveles.grado
     from alumnos_niveles`;
-    
+
     query += ` WHERE alumnos_niveles.id_escuela = '${ID_ESCUELA}'`;
     query += `AND alumnos_niveles.numeroalumno = ${NUMEROALUMNO} `;
     query += `AND alumnos_niveles.inicial = ${INICIAL} `;

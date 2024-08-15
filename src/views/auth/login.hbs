@@ -1,7 +1,8 @@
 <link rel="stylesheet" href="/css/login.css">
 
+
 <div class="w-100 d-flex justify-content-center align-items-center"
-  style="padding-top: 8%; left: 0%; position: absolute;">
+  style="padding-top: 0%; left: 0%; position: absolute;">
   <div class="card w-75" style="max-width: 620px;">
 
     <nav>
@@ -43,7 +44,7 @@
                     </div>
                   </div>
                 </div>
-                <input type="text" class="form-control" name="user" id="user" required>
+                <input type="text" class="form-control" name="user" id="user" required maxlength="8" pattern="\d{1,8}" title="La matrícula debe ser un número de hasta 8 dígitos.">
               </div>
             </div>
 
@@ -135,7 +136,7 @@
 
           <form id="form" action="/login/profe" method="post" class="d-flex flex-column justify-content-center">
             <div>
-              <label for="matricula" class="form-label">Folio de profesor</label>
+              <label for="CLAVEPROFESOR" class="form-label">Folio de profesor</label>
               <div class="input-group mb-2">
                 <div class="input-group-prepend">
                   <div class="input-group-text">
@@ -144,7 +145,7 @@
                     </div>
                   </div>
                 </div>
-                <input type="text" class="form-control" name="user" id="user" required>
+                <input type="text" class="form-control" name="user" id="user" required maxlength="6" pattern="[A-Za-z0-9]{1,6}" title="La clabe del profesor debe ser de hasta 6 caracters.">
               </div>
             </div>
 
@@ -232,19 +233,25 @@
 
 </script>
 
-<script>
-  const inputPass = document.getElementById("pass");
-  const btnShow = document.getElementById("show-pass");
-  const btnLogin = document.getElementById("btn");
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Mostrar y ocultar contraseña
+    document.querySelectorAll('.btn-show').forEach(button => {
+      button.addEventListener('click', () => {
+        const input = button.previousElementSibling;
+        input.type === 'password' ? input.type = 'text' : input.type = 'password';
+      });
+    });
 
-  // Muestra y oculta la contraseña
-  btnShow.addEventListener("click", () => {
-    inputPass.type === "password"
-      ? (inputPass.type = "text")
-      : (inputPass.type = "password");
-  });
-
-  btnLogin.addEventListener("click", () => {
-    btnLogin.innerHTML = '<div class="spinner-border"></div>'
-  });
-</script>
+    // Añadir validación del formulario
+    const forms = document.querySelectorAll('.needs-validation');
+    forms.forEach(form => {
+      form.addEventListener('submit', event => {
+        if (!form.checkValidity()) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+      });
+    });
+  </script>

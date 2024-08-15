@@ -1,14 +1,19 @@
-<section class="section">
-  <div id="container" class="row d-none">
-    <div class="col-lg-12">
-       <div class="mb-3">
+<section class="container">
+ <div class="mb-3">
     {{>btnBack}}
   </div>
 
+  <div id="container" class="row d-none">
+
+    <div class="d-flex flex-row-reverse pb-3">
+      <a class="btn btn-outline-primary" href="/grupos/crear">Crear grupo</a>
+    </div>
+
+    <div class="col-lg-12">
       <div class="card">
 
         <div class="text-center" style="padding: 13px;">
-          <h1><i class="bi bi-people"></i><span>Alumnos</span></h1>
+          <h1><i class="bi bi-people"></i><span>Grupos</span></h1>
         </div>
 
         <div class="card-body">
@@ -16,16 +21,7 @@
 
             <div class="d-flex w-100">
 
-              <div class="flex-fill">
-                <div class="input-group mb-1">
-                  <div class="input-group-prepend">
-                    <span class="input-group-text">
-                      <i class="bi bi-search"></i>
-                    </span>
-                  </div>
-                  <input type="search" class="form-control" placeholder="Buscar" id="buscar" value="{{search}}">
-                </div>
-              </div>
+              
 
               <div>
                 <div class="dropdown">
@@ -36,34 +32,33 @@
                   <ul class="dropdown-menu">
 
                     <li class="dropdown-item">
-                      <input class="form-check-input" type="radio" id="ordernum" name="orderBy" checked
-                        onchange="handleOrder('numeroalumno')">
-                      <label class="form-check-label" for="ordernum">
-                        Numero alumno
+                      <input class="form-check-input" type="radio" id="orderApe" name="orderBy" checked
+                        onchange="handleOrder('codigo_carrera')">
+                      <label class="form-check-label" for="orderApe">
+                        Codigo carrera
                       </label>
                     </li>
-
-                      <li class="dropdown-item">
-                      <input class="form-check-input" type="radio" id="orderApe" name="orderBy" checked
-                        onchange="handleOrder('paterno')">
-                      <label class="form-check-label" for="orderApe">
-                        Apellido
+                    <li class="dropdown-item">
+                      <input class="form-check-input" type="radio" id="orderInicia" name="orderBy" checked
+                        onchange="handleOrder('inicial')">
+                      <label class="form-check-label" for="orderInicia">
+                        Inicio
                       </label>
                     </li>
 
                     <li class="dropdown-item">
                       <input class="form-check-input" type="radio" id="orderName" name="orderBy"
-                        onchange="handleOrder('nombre')">
+                        onchange="handleOrder('codigo_grupo')">
                       <label class="form-check-label" for="orderName">
-                        Nombre
+                        Codigo grupo
                       </label>
                     </li>
 
                     <li class="dropdown-item">
                       <input class="form-check-input" type="radio" id="orderMatri" name="orderBy"
-                        onchange="handleOrder('matricula')">
+                        onchange="handleOrder('grupo')">
                       <label class="form-check-label" for="orderMatri">
-                        Matricula
+                        Grupo
                       </label>
                     </li>
 
@@ -71,7 +66,7 @@
 
 
                     <li class="dropdown-item">
-                      <input class="form-check-input" type="radio" id="orderDesc" name="sort" checked
+                      <input class="form-check-input" type="radio" id="orderDesc" name="sort"
                         onchange="handleSort('asc')">
                       <label class="form-check-label" for="orderDesc">
                         Ascendente
@@ -79,7 +74,7 @@
                     </li>
 
                     <li class="dropdown-item">
-                      <input class="form-check-input" type="radio" id="orderAsc" name="sort"
+                      <input class="form-check-input" type="radio" id="orderAsc" name="sort"checked
                         onchange="handleSort('desc')">
                       <label class="form-check-label" for="orderAsc">
                         Descendente
@@ -92,23 +87,26 @@
             </div>
 
             <!-- Table with stripped rows -->
-            <div class="table-responsive">
+            <div  id="buscar" class="table-responsive">
               <table align="center" class="table table-hover">
                 <thead class="table-dark">
                   <tr>
-                    <th style="text-align: center;" scope="col">#</th>
-                    <th style="text-align: center;" scope="col">Numero Alumno</th>
-                    <th style="text-align: center;" scope="col">Apellidos</th>
-                    <th style="text-align: center;" scope="col">Nombre</th>
-                    <th style="text-align: center;" scope="col">Matricula</th>
-                    <th style="text-align: center;" scope="col">Estatus</th>
-                    <th style="text-align: center;" scope="col">Nivel</th>
-                    <th style="text-align: center;" scope="col">TSU</th>
-                    <th style="text-align: center;" scope="col">LIC</th>
+                    <th scope="col">#</th>
+                    <th scope="col">Codigo carrera</th>
+                    <th scope="col">Inicial</th>
+                    <th scope="col">Final</th>
+                    <th scope="col">Codigo grupo</th>
+                    <th scope="col">Cuatri</th>
+                    <th scope="col">Grupo</th>
+                    <th scope="col">Inscritos</th>
+                    <th scope="col">Tutor</th>
+                    
+
                   </tr>
                 </thead>
 
                 <tbody id="table-container"></tbody>
+
               </table>
 
               <div class="d-flex justify-content-center pb-2">
@@ -131,4 +129,4 @@
   <div id="preloader"></div>
 </section>
 
-<script src="js/services/admin/getAlumnos.js"></script>
+<script src="/js/services/admin/getGruposCalifi.js"></script>

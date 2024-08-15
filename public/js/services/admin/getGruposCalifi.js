@@ -4,11 +4,11 @@ const table = document.getElementById("table-container");
 const inputSearch = document.getElementById("buscar");
 const load = document.getElementById("load");
 
-let limit = 20;
+let limit = 1000;
 let skip = 0;
 let search = "";
-let orderBy = "codigo_carrera";
-let sort = "asc";
+let orderBy = "inicial";
+let sort = "desc";
 let gruposLength = 0;
 
 inputSearch.addEventListener("input", debounce(() => {
@@ -24,7 +24,7 @@ const getGrupos = async () => {
   table.innerHTML = "";
   load.style.display = "block";
 
-  const url = `/api/gruposCalifi?limit=${limit}&skip=${skip}&search=${search}&orderBy=${orderBy}&sort=${sort}`;
+  const url = `/api/gruposCalifi?limit=${limit}&skip=${skip}&orderBy=${orderBy}&sort=${sort}`;
   const res = await fetch(url);
   const { grupos } = await res.json();
 
@@ -36,6 +36,8 @@ const getGrupos = async () => {
 
     content += `<td>${i + 1}</td>`;
     content += `<td>${item.CODIGO_CARRERA}</td>`;
+    content += `<td>${item.INICIAL}</td>`;
+    content += `<td>${item.FINAL}</td>`;
     content += `<td>${item.CODIGO_GRUPO}</td>`;
     content += `<td>${item.GRADO}</td>`;
     content += `<td>${item.GRUPO}</td>`;

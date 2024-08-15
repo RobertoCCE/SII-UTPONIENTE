@@ -1,6 +1,6 @@
 const Firebird = require("./Firebird");
 
-const ProfeAuth = new Firebird("profesores", "email", "password");
+const ProfeAuth = new Firebird("profesores", "claveprofesor", "password");
 
 const Profesores = new Firebird("profesores", "claveprofesor", "password");
 

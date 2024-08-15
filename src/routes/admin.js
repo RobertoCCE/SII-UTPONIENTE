@@ -22,6 +22,8 @@ router.get("/grupos/crear", GruposCtr.addView);
 router.get("/grupos/:idGrupo", GruposCtr.showById);
 router.get("/grupos/:idGrupo/editar", GruposCtr.editView);
 router.get("/grupos/:idGrupo/agregar_alumno", GruposCtr.addAlumnoView);
+router.get("/gruposCalifi", GruposCtr.showAnother);
+router.get("/gruposCalifi/:idGrupo", GruposCtr.showByIdAnother);
 
 router.get("/alumnos", AlumnosAdminCtr.show);
 router.get("/alumnos/nuevo", AlumnosAdminCtr.createView);
@@ -42,6 +44,11 @@ router.post("/cuatrimestres/nuevo", CuatrisCtr.create);
 router.get("/cuatrimestres/:id", CuatrisCtr.showById);
 router.post("/cuatrimestres/:id/update", CuatrisCtr.update);
 router.post("/cuatrimestres/:id/delete", CuatrisCtr.delete);
+
+// Ruta que renderiza una vista simple
+router.get('/admin/calificacion', (req, res) => {
+  res.render('admin/calificacion.hbs'); // Renderiza la vista 'admin/profes/hola'
+});
 
 router.get("/calificaciones", GruposCtr.show);
 router.get("/calificaciones/:idGrupo", CalifiCtr.showCalifi);
